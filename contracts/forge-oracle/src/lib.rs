@@ -61,14 +61,17 @@ pub struct ForgeOracle;
 
 #[contractimpl]
 impl ForgeOracle {
-    /// Initialize the oracle with an admin and staleness threshold.
+    /// Initializes the oracle contract with an admin address and staleness threshold.
     ///
-    /// # Parameters
-    /// - `admin`: Address authorized to submit prices.
-    /// - `staleness_threshold`: Max seconds before a price is considered stale.
+    /// - `env`: The Soroban environment.
+    /// - `admin`: The Address authorized to submit prices and manage the oracle.
+    /// - `staleness_threshold`: The maximum number of seconds before a price is considered stale.
     ///
-    /// # Errors
-    /// - `OracleError::AlreadyInitialized` if already set up.
+    /// Returns `Ok(())` on successful initialization, or an `OracleError` if the contract is already initialized.
+    ///
+    /// ```
+    /// client.initialize(&admin, &3600);
+    /// ```
     pub fn initialize(
         env: Env,
         admin: Address,
@@ -85,16 +88,18 @@ impl ForgeOracle {
         Ok(())
     }
 
-    /// Submit a new price for a trading pair.
+    /// Submits a new price for a specified trading pair.
     ///
-    /// # Parameters
-    /// - `base`: Base asset symbol (e.g. `XLM`).
-    /// - `quote`: Quote asset symbol (e.g. `USDC`).
-    /// - `price`: Price scaled to 7 decimals.
+    /// - `env`: The Soroban environment.
+    /// - `base`: The base asset symbol (e.g., XLM).
+    /// - `quote`: The quote asset symbol (e.g., USDC).
+    /// - `price`: The price value scaled to 7 decimal places.
     ///
-    /// # Errors
-    /// - `OracleError::Unauthorized` if caller is not admin.
-    /// - `OracleError::InvalidPrice` if price is zero or negative.
+    /// Returns `Ok(())` on successful submission, or an `OracleError` if unauthorized or invalid price.
+    ///
+    /// ```
+    /// client.submit_price(&Symbol::new(&env, "XLM"), &Symbol::new(&env, "USDC"), &10000000);
+    /// ```
     pub fn submit_price(
         env: Env,
         base: Symbol,
@@ -134,13 +139,17 @@ impl ForgeOracle {
         Ok(())
     }
 
-    /// Get the current price for a trading pair.
-    /// Reverts with `PriceStale` if the price hasn't been updated
-    /// within the staleness threshold.
+    /// Retrieves the current price for a specified trading pair, checking for staleness.
     ///
-    /// # Errors
-    /// - `OracleError::PriceNotFound` if no price has been submitted.
-    /// - `OracleError::PriceStale` if the price is older than the threshold.
+    /// - `env`: The Soroban environment.
+    /// - `base`: The base asset symbol.
+    /// - `quote`: The quote asset symbol.
+    ///
+    /// Returns a `PriceData` struct with the price and timestamp on success, or an `OracleError` if not found or stale.
+    ///
+    /// ```
+    /// let price_data = client.get_price(&Symbol::new(&env, "XLM"), &Symbol::new(&env, "USDC"));
+    /// ```
     pub fn get_price(env: Env, base: Symbol, quote: Symbol) -> Result<PriceData, OracleError> {
         let pair = PricePair { base, quote };
 
@@ -170,11 +179,17 @@ impl ForgeOracle {
         Ok(PriceData { price, updated_at })
     }
 
-    /// Get the raw price without staleness check.
-    /// Useful for analytics or fallback logic.
+    /// Retrieves the raw price for a specified trading pair without checking staleness.
     ///
-    /// # Errors
-    /// - `OracleError::PriceNotFound` if no price has been submitted.
+    /// - `env`: The Soroban environment.
+    /// - `base`: The base asset symbol.
+    /// - `quote`: The quote asset symbol.
+    ///
+    /// Returns a `PriceData` struct with the price and timestamp on success, or an `OracleError` if not found.
+    ///
+    /// ```
+    /// let price_data = client.get_price_unsafe(&Symbol::new(&env, "XLM"), &Symbol::new(&env, "USDC"));
+    /// ```
     pub fn get_price_unsafe(
         env: Env,
         base: Symbol,
@@ -197,8 +212,16 @@ impl ForgeOracle {
         Ok(PriceData { price, updated_at })
     }
 
-    /// Update the staleness threshold.
-    /// Only callable by admin.
+    /// Updates the staleness threshold for price validity.
+    ///
+    /// - `env`: The Soroban environment.
+    /// - `new_threshold`: The new maximum seconds before a price is considered stale.
+    ///
+    /// Returns `Ok(())` on success, or an `OracleError` if not initialized or unauthorized.
+    ///
+    /// ```
+    /// client.set_staleness_threshold(&7200);
+    /// ```
     pub fn set_staleness_threshold(env: Env, new_threshold: u64) -> Result<(), OracleError> {
         let admin: Address = env
             .storage()
@@ -212,7 +235,16 @@ impl ForgeOracle {
         Ok(())
     }
 
-    /// Transfer admin role to a new address.
+    /// Transfers the admin role to a new address.
+    ///
+    /// - `env`: The Soroban environment.
+    /// - `new_admin`: The new Address to become the admin.
+    ///
+    /// Returns `Ok(())` on success, or an `OracleError` if not initialized or unauthorized.
+    ///
+    /// ```
+    /// client.transfer_admin(&new_admin);
+    /// ```
     pub fn transfer_admin(env: Env, new_admin: Address) -> Result<(), OracleError> {
         let admin: Address = env
             .storage()
@@ -224,7 +256,15 @@ impl ForgeOracle {
         Ok(())
     }
 
-    /// Get the current admin address.
+    /// Retrieves the current admin address.
+    ///
+    /// - `env`: The Soroban environment.
+    ///
+    /// Returns an `Option<Address>` containing the admin address if initialized, or `None` otherwise.
+    ///
+    /// ```
+    /// let admin = client.get_admin();
+    /// ```
     pub fn get_admin(env: Env) -> Option<Address> {
         env.storage().instance().get(&DataKey::Admin)
     }
