@@ -54,6 +54,12 @@ Admin-controlled price feeds with staleness protection for DeFi protocols.
 
 ---
 
+## 📖 JS/TS Examples
+
+See [JS/TS Examples](docs/js-examples.md) for TypeScript code examples using `@stellar/stellar-sdk`.
+
+---
+
 ## 🛠️ Prerequisites & Setup
 
 Soroban is Stellar’s smart contract platform, built for performance and developer-friendly Rust tooling. Learn more in the [official docs](https://developers.stellar.org/docs/smart-contracts/overview).
