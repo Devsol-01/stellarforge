@@ -539,6 +539,7 @@ impl GovernorContract {
     ///
     /// # Returns
     /// `true` if `voter` has cast a vote on `proposal_id`, `false` otherwise.
+    /// Returns `false` for non-existent proposal IDs (no error is thrown).
     ///
     /// # Example
     /// ```text
@@ -1112,6 +1113,22 @@ mod tests {
 
         // voter has voted
         assert!(client.has_voted(&pid, &voter));
+    }
+
+    #[test]
+    fn test_has_voted_returns_false_for_non_existent_proposal() {
+        let env = Env::default();
+        env.mock_all_auths();
+        env.ledger().with_mut(|l| l.timestamp = 0);
+        let client = setup(&env);
+
+        let voter = Address::generate(&env);
+
+        // Call has_voted with a proposal_id that was never created
+        let result = client.has_voted(&999, &voter);
+
+        // Should return false without throwing an error
+        assert!(!result);
     }
 
     #[test]
