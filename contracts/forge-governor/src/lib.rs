@@ -625,6 +625,7 @@ impl GovernorContract {
     ///
     /// # Returns
     /// `true` if `voter` has cast a vote on `proposal_id`, `false` otherwise.
+    /// Returns `false` for non-existent proposal IDs (no error is thrown).
     ///
     /// # Example
     /// ```text
@@ -1145,6 +1146,39 @@ mod tests {
     }
 
     #[test]
+    fn test_execute_twice_reverts_with_already_executed() {
+        let env = Env::default();
+        env.mock_all_auths();
+        env.ledger().with_mut(|l| l.timestamp = 0);
+        let client = setup(&env);
+
+        let proposer = Address::generate(&env);
+        let voter = Address::generate(&env);
+        let executor = Address::generate(&env);
+
+        let pid = client.propose(&proposer, &String::from_str(&env, "P"), &String::from_str(&env, "D"));
+        client.vote(&voter, &pid, &true, &200);
+        env.ledger().with_mut(|l| l.timestamp = 5000);
+        client.finalize(&pid);
+
+        // Execute the proposal
+        env.ledger().with_mut(|l| l.timestamp = 5000 + 86400);
+        client.execute(&executor, &pid);
+
+        // Verify proposal state is Executed
+        let proposal = client.get_proposal(&pid);
+        assert_eq!(proposal.state, ProposalState::Executed);
+
+        // Try to execute again
+        let result = client.try_execute(&executor, &pid);
+        assert_eq!(result, Err(Ok(GovernorError::AlreadyExecuted)));
+
+        // Verify proposal state is still Executed
+        let proposal = client.get_proposal(&pid);
+        assert_eq!(proposal.state, ProposalState::Executed);
+    }
+
+    #[test]
     fn test_has_voted_returns_true_for_voter() {
         let env = Env::default();
         env.mock_all_auths();
@@ -1198,6 +1232,22 @@ mod tests {
 
         // voter has voted
         assert!(client.has_voted(&pid, &voter));
+    }
+
+    #[test]
+    fn test_has_voted_returns_false_for_non_existent_proposal() {
+        let env = Env::default();
+        env.mock_all_auths();
+        env.ledger().with_mut(|l| l.timestamp = 0);
+        let client = setup(&env);
+
+        let voter = Address::generate(&env);
+
+        // Call has_voted with a proposal_id that was never created
+        let result = client.has_voted(&999, &voter);
+
+        // Should return false without throwing an error
+        assert!(!result);
     }
 
     #[test]
